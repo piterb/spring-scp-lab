@@ -1,6 +1,5 @@
 # --- Java ---
 *.class
-*.log
 *.jar
 *.war
 *.ear
