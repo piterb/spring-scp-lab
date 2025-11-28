@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scp-app
+  labels:
+    app: scp-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scp-app
+  template:
+    metadata:
+      labels:
+        app: scp-app
+    spec:
+      containers:
+        - name: scp-app
+          image: spring-scp-lab:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
