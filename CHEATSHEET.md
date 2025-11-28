@@ -600,7 +600,70 @@ Príkaz vypíše JWT token (jeden dlhý riadok). Ten skopíruj a v Dashboarde zv
 
 ---
 
-## 9. Poznámky
+## 9. Lens – Kubernetes Desktop GUI (odporúčaný nástroj)
+
+### 9.1 Inštalácia Lens na macOS
+
+Najjednoduchšia cesta cez Homebrew:
+
+```bash
+brew install --cask lens
+```
+
+> Nainštaluje desktopovú aplikáciu Lens – Kubernetes IDE.
+
+Aplikáciu spustíš cez Spotlight (`Lens`) alebo cez Applications.
+
+---
+
+### 9.2 Prihlásenie / licencie
+
+* Lens môže zobrazovať prihlasovacie okno pri prvom spustení.
+* **Na základné používanie nie je potrebná platená licencia.**
+* Môžeš buď:
+
+    * kliknúť **“Continue without signing in”** / **“Skip for now”**, alebo
+    * vytvoriť si bezplatný Lens účet (nič neplatíš), ktorý umožní prístup do aplikácie.
+
+Konfigurácia K8s clusterov zostáva 100% zadarmo.
+
+---
+
+### 9.3 Pripojenie Lens k tvojmu KIND clustru
+
+Lens automaticky načíta contexty z `~/.kube/config` – teda rovnaké, ktoré používa `kubectl`.
+
+Overenie contextov:
+
+```bash
+kubectl config get-contexts
+```
+
+> Mal by si vidieť context typu `kind-scp-lab`.
+
+V Lense:
+
+* otvor sekciu **Clusters**
+* vyber context `kind-scp-lab`
+* klikni **Connect**
+
+---
+
+### 9.4 Čo v Lense uvidíš
+
+* **Nodes** (napr. `scp-lab-control-plane`)
+* **Workloads** → Deployments, ReplicaSets, Pods
+* **Networking** → Services, Ingresses
+* **Configuration** → ConfigMaps, Secrets
+* Logy konkrétneho Podu jedným klikom
+* Port-forward GUI (zjednodušenie oproti CLI)
+* Vizualizáciu Events (to isté čo `kubectl describe pod`)
+
+Lens výrazne zjednodušuje orientáciu v Kubernetes clustri počas vývoja.
+
+---
+
+## 10. Poznámky
 
 * Tento cheatsheet je WIP – budeme ho postupne dopĺňať o:
 
