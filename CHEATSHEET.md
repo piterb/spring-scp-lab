@@ -671,3 +671,56 @@ Lens výrazne zjednodušuje orientáciu v Kubernetes clustri počas vývoja.
     * kind konfiguračný súbor s prednastaveným labelom `ingress-ready`
     * GitLab CI/CD kroky
     * typické `kubectl` a `docker` príkazy pre debug a rollout.
+
+---
+
+## 11. Čistenie `default` namespace (lokálny dev cluster)
+
+Tieto príkazy používaj len na **lokálnom vývojovom clustri** (kind, Docker Desktop, minikube),
+aby si vyčistil `default` namespace od svojich testovacích aplikácií.
+
+### Zobrazenie objektov v `default` namespace
+
+```bash
+kubectl get all -n default
+```
+
+### Zmazanie všetkých Deploymentov v `default`
+
+```bash
+kubectl delete deployment --all -n default
+```
+
+### Zmazanie všetkých Services v `default`
+
+```bash
+kubectl delete service --all -n default
+```
+
+> Poznámka: systémová Service `kubernetes` sa **neodstráni** – je chránená Kubernetesom.
+> Kubernetes ju buď nedovolí zmazať, alebo ju znovu vytvorí.
+
+### Zmazanie všetkých Ingressov v `default`
+
+```bash
+kubectl delete ingress --all -n default
+```
+
+### Kompletné vyčistenie bežných workloadov v `default`
+
+```bash
+kubectl delete all --all -n default
+```
+
+### Overenie, že `default` je „čistý“
+
+```bash
+kubectl get all -n default
+```
+
+Typicky má ostať iba:
+
+```text
+service/kubernetes   ClusterIP   …   443/TCP   AGE
+```
+
