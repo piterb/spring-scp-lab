@@ -28,6 +28,40 @@ brew --version
 
 > Overenie, že Homebrew funguje.
 
+### 1.2 SSH kľúče (macOS)
+
+Vytvorenie nového SSH kľúča (Ed25519) + pridanie do agenta a configu:
+
+```bash
+ssh-keygen -t ed25519 -C "tvoje-meno@priklad.sk"
+```
+
+> Vytvorí kľúč `~/.ssh/id_ed25519` a public `~/.ssh/id_ed25519.pub`.
+
+```bash
+eval "$(ssh-agent -s)"
+ssh-add --apple-use-keychain ~/.ssh/id_ed25519
+```
+
+> Spustí `ssh-agent` a uloží kľúč do macOS Keychain (automatické načítanie).
+
+```bash
+cat <<'EOF' >> ~/.ssh/config
+Host *
+  AddKeysToAgent yes
+  UseKeychain yes
+  IdentityFile ~/.ssh/id_ed25519
+EOF
+```
+
+> Základný config, aby sa kľúč pridal do agenta a používal sa automaticky.
+
+```bash
+pbcopy < ~/.ssh/id_ed25519.pub
+```
+
+> Skopíruje public kľúč do schránky (na pridanie do GitHub/GitLab).
+
 ---
 
 ## 2. Docker
@@ -723,4 +757,3 @@ Typicky má ostať iba:
 ```text
 service/kubernetes   ClusterIP   …   443/TCP   AGE
 ```
-
