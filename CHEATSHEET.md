@@ -75,7 +75,7 @@ ssh-add --apple-use-keychain ~/.ssh/id_ed25519
 ```bash
 ssh-add -l
 ```
-
+ 
 > Overi, ze je kluc nacitany
 
 ```bash
