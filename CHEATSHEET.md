@@ -69,7 +69,7 @@ ssh-keygen -t ed25519 -C "tvoje-meno@priklad.sk"
 eval "$(ssh-agent -s)"
 ssh-add --apple-use-keychain ~/.ssh/id_ed25519
 ```
-
+ 
 > Spustí `ssh-agent` a uloží kľúč do macOS Keychain (automatické načítanie).
 
 ```bash
