@@ -73,6 +73,12 @@ ssh-add --apple-use-keychain ~/.ssh/id_ed25519
 > Spustí `ssh-agent` a uloží kľúč do macOS Keychain (automatické načítanie).
 
 ```bash
+ssh-add -l
+```
+
+> Overi, ze je kluc nacitany
+
+```bash
 cat <<'EOF' >> ~/.ssh/config
 Host *
   AddKeysToAgent yes
