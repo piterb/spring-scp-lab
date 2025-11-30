@@ -516,6 +516,12 @@ git push origin <branch>
 
 > Odošle commitnuté zmeny na GitLab.
 
+```bash
+git push --all origin
+```
+
+> Odošle commitnuté zmeny vo vsetkych vetvach na vsetky vetvy v danom remote
+
 ### 8.5 Stiahnutie zmien z remote
 
 ```bash
