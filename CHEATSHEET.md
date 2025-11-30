@@ -5,6 +5,33 @@ Budeme ho postupne dopĺňať podľa toho, čo v kurze použijeme.
 
 ---
 
+## Obsah
+
+- [1. Základný setup na Macu](#1-základný-setup-na-macu)
+  - [1.1 Homebrew](#11-homebrew)
+  - [1.2 SSH kľúče (macOS)](#12-ssh-kľúče-macos)
+- [2. Docker](#2-docker)
+- [3. Kubernetes – kind + kubectl](#3-kubernetes--kind--kubectl)
+  - [3.1 Inštalácia nástrojov](#31-inštalácia-nástrojov)
+  - [3.2 Vytvorenie a zmazanie clustra](#32-vytvorenie-a-zmazanie-clustra)
+  - [3.3 Základné kubectl príkazy](#33-základné-kubectl-príkazy)
+- [4. Deploy lokálneho Docker image do kind](#4-deploy-lokálneho-docker-image-do-kind)
+- [4. Dockerfile pre Spring Boot aplikáciu](#4-dockerfile-pre-spring-boot-aplikáciu)
+- [5. YAML manifesty (Deployment + Service)](#5-yaml-manifesty-deployment--service)
+  - [5.1 Deployment (scp-app)](#51-deployment-scp-app)
+  - [5.2 Service (scp-service)](#52-service-scp-service)
+  - [5.3 Aplikovanie manifestov](#53-aplikovanie-manifestov)
+- [6. Prístup k aplikácii (bez Ingress) – port-forward](#6-prístup-k-aplikácii-bez-ingress--port-forward)
+- [7. Ingress NGINX – inštalácia, debug a konfigurácia](#7-ingress-nginx--inštalácia-debug-a-konfigurácia)
+  - [7.1 Inštalácia Ingress NGINX pre kind](#71-inštalácia-ingress-nginx-pre-kind)
+  - [7.2 Riešenie stavu Pending (nodeSelector  label)](#72-riešenie-stavu-pending-nodeselector--label)
+  - [7.3 Ingress resource pre aplikáciu](#73-ingress-resource-pre-aplikáciu)
+  - [7.4 Port-forward na Ingress Controller (HTTP vstup cez Ingress)](#74-port-forward-na-ingress-controller-http-vstup-cez-ingress)
+  - [7.5 Alternatívny port-forward (priame volanie Service – obchádza Ingress)](#75-alternatívny-port-forward-priame-volanie-service--obchádza-ingress)
+- [8. Git – základné príkazy](#8-git--základné-príkazy)
+
+---
+
 ## 1. Základný setup na Macu
 
 ### 1.1 Homebrew
