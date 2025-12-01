@@ -91,11 +91,11 @@ deploy_test:
     - mkdir -p k8s/generated
 
     - echo "==> Generujem YAML z templátov (TEST)..."
-    - envsubst < k8s/templates/configmap.yaml.tpl  > k8s/generated/configmap.yaml
-    - envsubst < k8s/templates/secret.yaml.tpl     > k8s/generated/secret.yaml
-    - envsubst < k8s/templates/deployment.yaml.tpl > k8s/generated/deployment.yaml
-    - envsubst < k8s/templates/service.yaml.tpl    > k8s/generated/service.yaml
-    - envsubst < k8s/templates/ingress.yaml.tpl    > k8s/generated/ingress.yaml
+    - envsubst < k8s/configmap.yaml.tpl  > k8s/generated/configmap.yaml
+    - envsubst < k8s/secret.yaml.tpl     > k8s/generated/secret.yaml
+    - envsubst < k8s/deployment.yaml.tpl > k8s/generated/deployment.yaml
+    - envsubst < k8s/service.yaml.tpl    > k8s/generated/service.yaml
+    - envsubst < k8s/ingress.yaml.tpl    > k8s/generated/ingress.yaml
 
     - echo "==> kubectl apply (TEST)..."
     - kubectl apply -n "$K8S_NAMESPACE" -f k8s/generated/
@@ -132,11 +132,11 @@ deploy_prod:
     - mkdir -p k8s/generated
 
     - echo "==> Generujem YAML z templátov (PROD)..."
-    - envsubst < k8s/templates/configmap.yaml.tpl  > k8s/generated/configmap.yaml
-    - envsubst < k8s/templates/secret.yaml.tpl     > k8s/generated/secret.yaml
-    - envsubst < k8s/templates/deployment.yaml.tpl > k8s/generated/deployment.yaml
-    - envsubst < k8s/templates/service.yaml.tpl    > k8s/generated/service.yaml
-    - envsubst < k8s/templates/ingress.yaml.tpl    > k8s/generated/ingress.yaml
+    - envsubst < k8s/configmap.yaml.tpl  > k8s/generated/configmap.yaml
+    - envsubst < k8s/secret.yaml.tpl     > k8s/generated/secret.yaml
+    - envsubst < k8s/deployment.yaml.tpl > k8s/generated/deployment.yaml
+    - envsubst < k8s/service.yaml.tpl    > k8s/generated/service.yaml
+    - envsubst < k8s/ingress.yaml.tpl    > k8s/generated/ingress.yaml
 
     - echo "==> kubectl apply (PROD)..."
     - kubectl apply -n "$K8S_NAMESPACE" -f k8s/generated/
