@@ -73,12 +73,12 @@ deploy_test:
     - echo "==> Deploy na TEST"
 
     # prostredie (statické hodnoty pre test)
-    - export K8S_NAMESPACE="scp-test"
+    - export K8S_NAMESPACE="scp-lab-test"
     - export APP_HOST="test.scp.local"
     - export SPRING_PROFILE="test"
 
     # kubeconfig pre TEST cluster
-    - echo "$KUBECONFIG_TEST" | base64 -d > kubeconfig
+    - echo "$KUBECONFIG" | base64 -d > kubeconfig
     - export KUBECONFIG="$CI_PROJECT_DIR/kubeconfig"
 
     # IMAGE z docker jobu
@@ -114,12 +114,12 @@ deploy_prod:
   script:
     - echo "==> Deploy na PROD"
 
-    - export K8S_NAMESPACE="scp-prod"
+    - export K8S_NAMESPACE="scp-lab-prod"
     - export APP_HOST="app.scp.local"
     - export SPRING_PROFILE="prod"
 
     # kubeconfig pre PROD cluster
-    - echo "$KUBECONFIG_PROD" | base64 -d > kubeconfig
+    - echo "$KUBECONFIG" | base64 -d > kubeconfig
     - export KUBECONFIG="$CI_PROJECT_DIR/kubeconfig"
 
     - export IMAGE="$CI_REGISTRY_IMAGE:$IMAGE_TAG"
