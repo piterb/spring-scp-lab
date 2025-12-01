@@ -62,7 +62,9 @@ docker_build_push:
 # 3) Deploy na TEST
 deploy_test:
   stage: deploy
-  image: bitnami/kubectl:latest
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [ "" ]
   environment:
     name: test                 # GitLab použije test-scoped CI variables
   needs:
@@ -103,7 +105,9 @@ deploy_test:
 # 4) Deploy na PROD
 deploy_prod:
   stage: deploy
-  image: bitnami/kubectl:latest
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
   environment:
     name: prod                 # GitLab použije prod-scoped CI variables
   needs:
