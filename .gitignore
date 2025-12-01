@@ -33,6 +33,7 @@ target/
 # --- Local environment config (secret / dev only) ---
 application-local.properties
 application-local.yml
+.env.local
 
 # --- Docker ---
 docker-data/

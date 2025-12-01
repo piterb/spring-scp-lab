@@ -1,0 +1,140 @@
+stages:
+  - build
+  - docker
+  - deploy
+
+variables:
+  GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
+  DOCKER_TLS_CERTDIR: ""        # jednoduchší dind (bez TLS komplikácií)
+  DOCKER_DRIVER: overlay2
+
+# 1) Build + test (iba raz)
+build_and_test:
+  stage: build
+  image: gradle:8.9-jdk17
+  script:
+    - echo "==> Gradle clean test bootJar"
+    - gradle clean test bootJar
+  artifacts:
+    paths:
+      - build/libs/
+    expire_in: 1 week
+  only:
+    - test
+    - main
+
+# 2) Docker build + push
+docker_build_push:
+  stage: docker
+  image: docker:27
+  services:
+    - docker:27-dind
+  needs:
+    - build_and_test
+  script:
+    - echo "==> Login do GitLab Container Registry"
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+
+    - |
+      if [ "$CI_COMMIT_BRANCH" = "test" ]; then
+        IMAGE_TAG="test-$CI_COMMIT_SHORT_SHA"
+      elif [ "$CI_COMMIT_BRANCH" = "main" ]; then
+        IMAGE_TAG="prod-$CI_COMMIT_SHORT_SHA"
+      else
+        IMAGE_TAG="$CI_COMMIT_SHORT_SHA"
+      fi
+      echo "IMAGE_TAG=$IMAGE_TAG" > image.env
+
+    - export IMAGE="$CI_REGISTRY_IMAGE:$IMAGE_TAG"
+    - echo "==> Build docker image $IMAGE"
+    - docker build -t "$IMAGE" .
+
+    - echo "==> Push docker image"
+    - docker push "$IMAGE"
+
+  artifacts:
+    reports:
+      dotenv: image.env        # IMAGE_TAG sa prenesie do deploy jobov
+  only:
+    - test
+    - main
+
+# 3) Deploy na TEST
+deploy_test:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  environment:
+    name: test                 # GitLab použije test-scoped CI variables
+  needs:
+    - docker_build_push
+  only:
+    - test
+  script:
+    - echo "==> Deploy na TEST"
+
+    # prostredie (statické hodnoty pre test)
+    - export K8S_NAMESPACE="scp-test"
+    - export APP_HOST="test.scp.local"
+    - export SPRING_PROFILE="test"
+
+    # kubeconfig pre TEST cluster
+    - echo "$KUBECONFIG_TEST" | base64 -d > kubeconfig
+    - export KUBECONFIG="$CI_PROJECT_DIR/kubeconfig"
+
+    # IMAGE z docker jobu
+    - export IMAGE="$CI_REGISTRY_IMAGE:$IMAGE_TAG"
+
+    # tooling pre envsubst
+    - apt-get update && apt-get install -y gettext-base
+    - mkdir -p k8s/generated
+
+    - echo "==> Generujem YAML z templátov (TEST)..."
+    - envsubst < k8s/templates/configmap.yaml.tpl  > k8s/generated/configmap.yaml
+    - envsubst < k8s/templates/secret.yaml.tpl     > k8s/generated/secret.yaml
+    - envsubst < k8s/templates/deployment.yaml.tpl > k8s/generated/deployment.yaml
+    - envsubst < k8s/templates/service.yaml.tpl    > k8s/generated/service.yaml
+    - envsubst < k8s/templates/ingress.yaml.tpl    > k8s/generated/ingress.yaml
+
+    - echo "==> kubectl apply (TEST)..."
+    - kubectl apply -n "$K8S_NAMESPACE" -f k8s/generated/
+
+    - kubectl get pods -n "$K8S_NAMESPACE"
+
+# 4) Deploy na PROD
+deploy_prod:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  environment:
+    name: prod                 # GitLab použije prod-scoped CI variables
+  needs:
+    - docker_build_push
+  only:
+    - main
+  when: manual                 # napr. ručné spustenie produkčného deployu
+  script:
+    - echo "==> Deploy na PROD"
+
+    - export K8S_NAMESPACE="scp-prod"
+    - export APP_HOST="app.scp.local"
+    - export SPRING_PROFILE="prod"
+
+    # kubeconfig pre PROD cluster
+    - echo "$KUBECONFIG_PROD" | base64 -d > kubeconfig
+    - export KUBECONFIG="$CI_PROJECT_DIR/kubeconfig"
+
+    - export IMAGE="$CI_REGISTRY_IMAGE:$IMAGE_TAG"
+
+    - apt-get update && apt-get install -y gettext-base
+    - mkdir -p k8s/generated
+
+    - echo "==> Generujem YAML z templátov (PROD)..."
+    - envsubst < k8s/templates/configmap.yaml.tpl  > k8s/generated/configmap.yaml
+    - envsubst < k8s/templates/secret.yaml.tpl     > k8s/generated/secret.yaml
+    - envsubst < k8s/templates/deployment.yaml.tpl > k8s/generated/deployment.yaml
+    - envsubst < k8s/templates/service.yaml.tpl    > k8s/generated/service.yaml
+    - envsubst < k8s/templates/ingress.yaml.tpl    > k8s/generated/ingress.yaml
+
+    - echo "==> kubectl apply (PROD)..."
+    - kubectl apply -n "$K8S_NAMESPACE" -f k8s/generated/
+
+    - kubectl get pods -n "$K8S_NAMESPACE"
