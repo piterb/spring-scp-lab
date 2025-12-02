@@ -29,15 +29,15 @@ Budeme ho postupne dopĺňať podľa toho, čo v kurze použijeme.
   - [7.4 Port-forward na Ingress Controller (HTTP vstup cez Ingress)](#74-port-forward-na-ingress-controller-http-vstup-cez-ingress)
   - [7.5 Alternatívny port-forward (priame volanie Service – obchádza Ingress)](#75-alternatívny-port-forward-priame-volanie-service--obchádza-ingress)
 - [8. Git – základné príkazy](#8-git--základné-príkazy)
-- [12. CI/CD – GitLab → lokálny K8s (Docker Desktop)](#12-cicd--gitlab--lokálny-k8s-docker-desktop)
-  - [12.1 Prerekvizity](#121-prerekvizity)
-  - [12.2 GitLab Runner – lokálny runner na macOS](#122-gitlab-runner--lokálny-runner-na-macos)
-  - [12.3 Kubeconfig pre CI (KUBECONFIG variable)](#123-kubeconfig-pre-ci-kubeconfig-variable)
-  - [12.4 GitLab Container Registry – prístup z Kubernetes](#124-gitlab-container-registry--prístup-z-kubernetes)
-  - [12.5 CI/CD pipeline – finálny stav](#125-cicd-pipeline--finálny-stav)
-  - [12.6 Testy a debug príkazy](#126-testy-a-debug-príkazy)
-  - [12.7 Troubleshooting – reálne problémy](#127-troubleshooting--reálne-problémy)
-  - [12.8 Záver](#128-záver)
+- [9. CI/CD – GitLab → lokálny K8s (Docker Desktop)](#12-cicd--gitlab--lokálny-k8s-docker-desktop)
+  - [9.1 Prerekvizity](#121-prerekvizity)
+  - [9.2 GitLab Runner – lokálny runner na macOS](#122-gitlab-runner--lokálny-runner-na-macos)
+  - [9.3 Kubeconfig pre CI (KUBECONFIG variable)](#123-kubeconfig-pre-ci-kubeconfig-variable)
+  - [9.4 GitLab Container Registry – prístup z Kubernetes](#124-gitlab-container-registry--prístup-z-kubernetes)
+  - [9.5 CI/CD pipeline – finálny stav](#125-cicd-pipeline--finálny-stav)
+  - [9.6 Testy a debug príkazy](#126-testy-a-debug-príkazy)
+  - [9.7 Troubleshooting – reálne problémy](#127-troubleshooting--reálne-problémy)
+  - [9.8 Záver](#128-záver)
 
 ---
 
@@ -807,11 +807,11 @@ service/kubernetes   ClusterIP   …   443/TCP   AGE
 
 ---
 
-## 12. CI/CD – GitLab → lokálny K8s (Docker Desktop)
+## 9. CI/CD – GitLab → lokálny K8s (Docker Desktop)
 
-### 12.1 Prerekvizity
+### 9.1 Prerekvizity
 
-#### 12.1.1 macOS + Docker Desktop
+#### 9.1.1 macOS + Docker Desktop
 
 - Nainštalovaný **Docker Desktop**.
 - V nastaveniach Docker Desktop je zapnutý **Kubernetes**.
@@ -828,7 +828,7 @@ Typický API server (port si vezmi z reálneho kubeconfigu):
 server: https://127.0.0.1:59107
 ```
 
-#### 12.1.2 GitLab projekt
+#### 9.1.2 GitLab projekt
 
 Na `gitlab.com` potrebuješ projekt:
 
@@ -837,15 +837,15 @@ Na `gitlab.com` potrebuješ projekt:
 - GitLab Container Registry (súčasť projektu)
 - deploy tokens / CI variables
 
-### 12.2 GitLab Runner – lokálny runner na macOS
+### 9.2 GitLab Runner – lokálny runner na macOS
 
-#### 12.2.1 Inštalácia
+#### 9.2.1 Inštalácia
 
 ```bash
 brew install gitlab-runner
 ```
 
-#### 12.2.2 Registrácia runnera
+#### 9.2.2 Registrácia runnera
 
 ```bash
 gitlab-runner register
@@ -860,7 +860,7 @@ Použité nastavenia:
 
 Po registrácii vznikne súbor `~/.gitlab-runner/config.toml`.
 
-#### 12.2.3 Konfigurácia runnera (použitie host Docker daemon)
+#### 9.2.3 Konfigurácia runnera (použitie host Docker daemon)
 
 Runner má používať host Docker daemon cez `/var/run/docker.sock` (stabilný build, žiadny dind).
 
@@ -890,7 +890,7 @@ Kľúčové:
 - `executor = "docker"`
 - `volumes` obsahuje `/var/run/docker.sock:/var/run/docker.sock` → job kontajnery používajú rovnaký Docker daemon ako host.
 
-#### 12.2.4 Reštart runnera
+#### 9.2.4 Reštart runnera
 
 ```bash
 brew services restart gitlab-runner
@@ -899,7 +899,7 @@ brew services list | grep gitlab-runner
 
 Stav: `gitlab-runner   started ...`. Ak je `error 1`, je chyba v `config.toml`.
 
-#### 12.2.5 Nastavenie tagov a chovanie v GitLabe
+#### 9.2.5 Nastavenie tagov a chovanie v GitLabe
 
 Project → Settings → CI/CD → Runners → Specific runners → edit tvoj runner:
 
@@ -914,9 +914,9 @@ tags: ["local-k8s"]
 
 Joby s týmto tagom pôjdu iba na tvoj runner.
 
-### 12.3 Kubeconfig pre CI (KUBECONFIG variable)
+### 9.3 Kubeconfig pre CI (KUBECONFIG variable)
 
-#### 12.3.1 Vytvoriť `config-ci`
+#### 9.3.1 Vytvoriť `config-ci`
 
 ```bash
 cp ~/.kube/config ~/.kube/config-ci
@@ -942,7 +942,7 @@ Dôležité:
 error: specifying a root certificates file with the insecure flag is not allowed
 ```
 
-#### 12.3.2 Base64 verzia kubeconfigu
+#### 9.3.2 Base64 verzia kubeconfigu
 
 ```bash
 cat ~/.kube/config-ci | base64
@@ -950,7 +950,7 @@ cat ~/.kube/config-ci | base64
 
 Skopíruj celý výstup (na GNU môžeš použiť `base64 -w0`).
 
-#### 12.3.3 GitLab CI/CD variable: `KUBECONFIG`
+#### 9.3.3 GitLab CI/CD variable: `KUBECONFIG`
 
 Project → Settings → CI/CD → Variables:
 
@@ -967,9 +967,9 @@ echo "$KUBECONFIG" | base64 -d > kubeconfig
 export KUBECONFIG="$CI_PROJECT_DIR/kubeconfig"
 ```
 
-### 12.4 GitLab Container Registry – prístup z Kubernetes
+### 9.4 GitLab Container Registry – prístup z Kubernetes
 
-#### 12.4.1 Vytvoriť Deploy Token
+#### 9.4.1 Vytvoriť Deploy Token
 
 Project → Settings → Repository → Deploy Tokens:
 
@@ -977,13 +977,13 @@ Project → Settings → Repository → Deploy Tokens:
 - Username: `k8s-pull`
 - Scopes: **len** `read_registry`
 
-#### 12.4.2 K8s secret typu `docker-registry`
+#### 9.4.2 K8s secret typu `docker-registry`
 
-V namespace `scp-test`:
+V namespace `scp-lab-test`:
 
 ```bash
 kubectl create secret docker-registry gitlab-regcred \
-  -n scp-test \
+  -n scp-lab-test \
   --docker-server=registry.gitlab.com \
   --docker-username=k8s-pull \
   --docker-password="SEM_TOKEN" \
@@ -992,7 +992,7 @@ kubectl create secret docker-registry gitlab-regcred \
 
 Pre `scp-prod` zopakuj s `-n scp-prod`.
 
-#### 12.4.3 `imagePullSecrets` v Deployment-e
+#### 9.4.3 `imagePullSecrets` v Deployment-e
 
 V šablóne `k8s/deployment.yaml.tpl` (v `spec.template.spec`):
 
@@ -1007,7 +1007,7 @@ containers:
       - containerPort: 8080
 ```
 
-### 12.5 CI/CD pipeline – finálny stav
+### 9.5 CI/CD pipeline – finálny stav
 
 Sample `.gitlab-ci.yml` (build → docker → deploy na TEST):
 
@@ -1084,7 +1084,7 @@ deploy_test:
   script:
     - echo "==> Deploy na TEST"
 
-    - export K8S_NAMESPACE="scp-test"
+    - export K8S_NAMESPACE="scp-lab-test"
     - export APP_HOST="test.scp.local"
     - export SPRING_PROFILE="test"
 
@@ -1108,9 +1108,9 @@ deploy_test:
     - kubectl get pods -n "$K8S_NAMESPACE"
 ```
 
-### 12.6 Testy a debug príkazy
+### 9.6 Testy a debug príkazy
 
-#### 12.6.1 Test kubectl z rovnakého image ako CI (`bitnami/kubectl`)
+#### 9.6.1 Test kubectl z rovnakého image ako CI (`bitnami/kubectl`)
 
 ```bash
 docker run --rm -it \
@@ -1125,7 +1125,7 @@ kubectl get pods -A
 
 Ak toto funguje, CI deploy job sa vie pripojiť k API serveru.
 
-#### 12.6.2 Test HTTPS spojenia na Kubernetes API
+#### 9.6.2 Test HTTPS spojenia na Kubernetes API
 
 ```bash
 docker run --rm -it alpine sh
@@ -1135,11 +1135,11 @@ curl -vk https://host.docker.internal:59107/api
 
 `-k` ignoruje TLS certifikát (rovnaké ako `insecure-skip-tls-verify: true`).
 
-#### 12.6.3 Test cez Service (obídenie ingress-u)
+#### 9.6.3 Test cez Service (obídenie ingress-u)
 
 ```bash
-kubectl get svc -n scp-test
-kubectl port-forward -n scp-test svc/scp-service 8081:8080
+kubectl get svc -n scp-lab-test
+kubectl port-forward -n scp-lab-test svc/scp-service 8081:8080
 
 # v inom termináli:
 curl -v http://localhost:8081/
@@ -1148,22 +1148,22 @@ curl -v http://localhost:8081/hello   # podľa endpointu appky
 
 Ak toto ide, Pod + Service fungujú; 404 môže byť v ingress/Host headri.
 
-#### 12.6.4 Test cez ingress
+#### 9.6.4 Test cez ingress
 
 ```bash
 kubectl get svc -n ingress-nginx
 kubectl port-forward -n ingress-nginx svc/ingress-nginx-controller 8081:80
-kubectl get ingress -n scp-test
-kubectl describe ingress -n scp-test
+kubectl get ingress -n scp-lab-test
+kubectl describe ingress -n scp-lab-test
 curl -v -H "Host: test.scp.local" http://localhost:8081/
 curl -v -H "Host: test.scp.local" http://localhost:8081/hello
 ```
 
 Správny Host header je nutný, inak 404.
 
-### 12.7 Troubleshooting – reálne problémy
+### 9.7 Troubleshooting – reálne problémy
 
-#### 12.7.1 Job padá: `lookup host.docker.internal … no such host`
+#### 9.7.1 Job padá: `lookup host.docker.internal … no such host`
 
 Symptóm:
 
@@ -1182,7 +1182,7 @@ Riešenie: runner tag `local-k8s`, `Run untagged jobs = false`, v CI joboch:
 tags: ["local-k8s"]
 ```
 
-#### 12.7.2 `error: specifying a root certificates file with the insecure flag is not allowed`
+#### 9.7.2 `error: specifying a root certificates file with the insecure flag is not allowed`
 
 Príčina: v kubeconfigu je súčasne `insecure-skip-tls-verify: true` a `certificate-authority*`.
 
@@ -1193,7 +1193,7 @@ server: https://host.docker.internal:PORT
 insecure-skip-tls-verify: true
 ```
 
-#### 12.7.3 `Cannot connect to the Docker daemon at tcp://docker:2375`
+#### 9.7.3 `Cannot connect to the Docker daemon at tcp://docker:2375`
 
 Príčina: používanie `docker:dind` (race condition).
 
@@ -1208,7 +1208,7 @@ volumes = [
 
 V CI stačí `image: docker:27` bez `services: docker:dind`.
 
-#### 12.7.4 `failed to authorize: failed to fetch anonymous token: 403 Forbidden`
+#### 9.7.4 `failed to authorize: failed to fetch anonymous token: 403 Forbidden`
 
 Príčina: K8s ťahá image z registry anonymne.
 
@@ -1219,13 +1219,13 @@ imagePullSecrets:
   - name: gitlab-regcred
 ```
 
-#### 12.7.5 `failed to download openapi` / `connection refused`
+#### 9.7.5 `failed to download openapi` / `connection refused`
 
 Príčina: kubeconfig v CI ukazuje na `127.0.0.1` / lokálnu IP, alebo API server na porte nepočúva.
 
 Riešenie: použiť `https://host.docker.internal:<port>` v kubeconfigu, otestovať cez `bitnami/kubectl`.
 
-#### 12.7.6 Ingress vracia 404
+#### 9.7.6 Ingress vracia 404
 
 Príčina: Ingress pravidlo používa Host header (napr. `test.scp.local`), request ide s Host `localhost`.
 
@@ -1235,7 +1235,7 @@ Riešenie:
 curl -v -H "Host: test.scp.local" http://localhost:8081/
 ```
 
-### 12.8 Záver
+### 9.8 Záver
 
 Táto kapitola obsahuje:
 
