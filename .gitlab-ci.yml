@@ -11,6 +11,7 @@ variables:
 # 1) Build + test (iba raz)
 build_and_test:
   stage: build
+  tags: ["local-k8s"]
   image: gradle:8.9-jdk17
   script:
     - echo "==> Gradle clean test bootJar"
@@ -26,6 +27,7 @@ build_and_test:
 # 2) Docker build + push
 docker_build_push:
   stage: docker
+  tags: ["local-k8s"]
   image: docker:27
   services:
     - docker:27-dind
@@ -62,6 +64,7 @@ docker_build_push:
 # 3) Deploy na TEST
 deploy_test:
   stage: deploy
+  tags: ["local-k8s"]
   image:
     name: bitnami/kubectl:latest
     entrypoint: [ "" ]
@@ -105,6 +108,7 @@ deploy_test:
 # 4) Deploy na PROD
 deploy_prod:
   stage: deploy
+  tags: ["local-k8s"]
   image:
     name: bitnami/kubectl:latest
     entrypoint: [""]
