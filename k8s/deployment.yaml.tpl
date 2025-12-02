@@ -15,6 +15,8 @@ spec:
       labels:
         app: scp-app
     spec:
+      imagePullSecrets:
+        - name: gitlab-regcred
       containers:
         - name: scp-app
           image: ${IMAGE}
