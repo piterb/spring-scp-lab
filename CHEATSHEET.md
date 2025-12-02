@@ -29,9 +29,9 @@ Budeme ho postupne dopĺňať podľa toho, čo v kurze použijeme.
   - [7.4 Port-forward na Ingress Controller (HTTP vstup cez Ingress)](#74-port-forward-na-ingress-controller-http-vstup-cez-ingress)
   - [7.5 Alternatívny port-forward (priame volanie Service – obchádza Ingress)](#75-alternatívny-port-forward-priame-volanie-service--obchádza-ingress)
 - [8. Git – základné príkazy](#8-git--základné-príkazy)
-- [9. Lens – Kubernetes Desktop GUI (odporúčaný nástroj)]
-- [10. Poznámky]
-- [11. Čistenie `default` namespace (lokálny dev cluster)]
+- [9. Lens – Kubernetes Desktop GUI (odporúčaný nástroj)](#9-lens--kubernetes-desktop-gui-odporúčaný-nástroj)
+- [10. Poznámky](#10-poznámky)
+- [11. Čistenie `default` namespace (lokálny dev cluster)](#11-čistenie-default-namespace-lokálny-dev-cluster)
 - [12. CI/CD – GitLab → lokálny K8s (Docker Desktop)](#12-cicd--gitlab--lokálny-k8s-docker-desktop)
   - [12.1 Prerekvizity](#121-prerekvizity)
   - [12.2 GitLab Runner – lokálny runner na macOS](#122-gitlab-runner--lokálny-runner-na-macos)
