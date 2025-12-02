@@ -29,6 +29,15 @@ Budeme ho postupne dopĺňať podľa toho, čo v kurze použijeme.
   - [7.4 Port-forward na Ingress Controller (HTTP vstup cez Ingress)](#74-port-forward-na-ingress-controller-http-vstup-cez-ingress)
   - [7.5 Alternatívny port-forward (priame volanie Service – obchádza Ingress)](#75-alternatívny-port-forward-priame-volanie-service--obchádza-ingress)
 - [8. Git – základné príkazy](#8-git--základné-príkazy)
+- [12. CI/CD – GitLab → lokálny K8s (Docker Desktop)](#12-cicd--gitlab--lokálny-k8s-docker-desktop)
+  - [12.1 Prerekvizity](#121-prerekvizity)
+  - [12.2 GitLab Runner – lokálny runner na macOS](#122-gitlab-runner--lokálny-runner-na-macos)
+  - [12.3 Kubeconfig pre CI (KUBECONFIG variable)](#123-kubeconfig-pre-ci-kubeconfig-variable)
+  - [12.4 GitLab Container Registry – prístup z Kubernetes](#124-gitlab-container-registry--prístup-z-kubernetes)
+  - [12.5 CI/CD pipeline – finálny stav](#125-cicd-pipeline--finálny-stav)
+  - [12.6 Testy a debug príkazy](#126-testy-a-debug-príkazy)
+  - [12.7 Troubleshooting – reálne problémy](#127-troubleshooting--reálne-problémy)
+  - [12.8 Záver](#128-záver)
 
 ---
 
@@ -742,7 +751,6 @@ Lens výrazne zjednodušuje orientáciu v Kubernetes clustri počas vývoja.
 
     * Ingress resource (routing na `scp-service`)
     * kind konfiguračný súbor s prednastaveným labelom `ingress-ready`
-    * GitLab CI/CD kroky
     * typické `kubectl` a `docker` príkazy pre debug a rollout.
 
 ---
@@ -796,3 +804,445 @@ Typicky má ostať iba:
 ```text
 service/kubernetes   ClusterIP   …   443/TCP   AGE
 ```
+
+---
+
+## 12. CI/CD – GitLab → lokálny K8s (Docker Desktop)
+
+### 12.1 Prerekvizity
+
+#### 12.1.1 macOS + Docker Desktop
+
+- Nainštalovaný **Docker Desktop**.
+- V nastaveniach Docker Desktop je zapnutý **Kubernetes**.
+
+Kubeconfig je v:
+
+```bash
+~/.kube/config
+```
+
+Typický API server (port si vezmi z reálneho kubeconfigu):
+
+```yaml
+server: https://127.0.0.1:59107
+```
+
+#### 12.1.2 GitLab projekt
+
+Na `gitlab.com` potrebuješ projekt:
+
+- repo pre kód
+- CI/CD
+- GitLab Container Registry (súčasť projektu)
+- deploy tokens / CI variables
+
+### 12.2 GitLab Runner – lokálny runner na macOS
+
+#### 12.2.1 Inštalácia
+
+```bash
+brew install gitlab-runner
+```
+
+#### 12.2.2 Registrácia runnera
+
+```bash
+gitlab-runner register
+```
+
+Použité nastavenia:
+
+- URL: `https://gitlab.com/`
+- Registration token: Project → Settings → CI/CD → Runners → Project registration token
+- Executor: `docker`
+- Default Docker image: `alpine:latest`
+
+Po registrácii vznikne súbor `~/.gitlab-runner/config.toml`.
+
+#### 12.2.3 Konfigurácia runnera (použitie host Docker daemon)
+
+Runner má používať host Docker daemon cez `/var/run/docker.sock` (stabilný build, žiadny dind).
+
+```toml
+concurrent = 1
+check_interval = 0
+
+[[runners]]
+  name = "mac-docker-runner"
+  url = "https://gitlab.com/"
+  token = "NEVKLADAŤ"
+  executor = "docker"
+
+  [runners.docker]
+    image = "alpine:latest"
+    privileged = true
+    volumes = [
+      "/var/run/docker.sock:/var/run/docker.sock",
+      "/cache"
+    ]
+
+  [runners.cache]
+```
+
+Kľúčové:
+
+- `executor = "docker"`
+- `volumes` obsahuje `/var/run/docker.sock:/var/run/docker.sock` → job kontajnery používajú rovnaký Docker daemon ako host.
+
+#### 12.2.4 Reštart runnera
+
+```bash
+brew services restart gitlab-runner
+brew services list | grep gitlab-runner
+```
+
+Stav: `gitlab-runner   started ...`. Ak je `error 1`, je chyba v `config.toml`.
+
+#### 12.2.5 Nastavenie tagov a chovanie v GitLabe
+
+Project → Settings → CI/CD → Runners → Specific runners → edit tvoj runner:
+
+- Tags: `local-k8s`
+- Run untagged jobs: `false`
+
+V `.gitlab-ci.yml` potom:
+
+```yaml
+tags: ["local-k8s"]
+```
+
+Joby s týmto tagom pôjdu iba na tvoj runner.
+
+### 12.3 Kubeconfig pre CI (KUBECONFIG variable)
+
+#### 12.3.1 Vytvoriť `config-ci`
+
+```bash
+cp ~/.kube/config ~/.kube/config-ci
+nano ~/.kube/config-ci
+```
+
+Uprav sekciu `clusters` pre tvoj cluster:
+
+```yaml
+clusters:
+- cluster:
+    server: https://host.docker.internal:59107
+    insecure-skip-tls-verify: true
+  name: docker-desktop
+```
+
+Dôležité:
+
+- `server` musí byť `https://host.docker.internal:<port>` → kontajner (CI job) sa pripojí na host.
+- odstráň riadky `certificate-authority*`, inak kubectl hlási:
+
+```
+error: specifying a root certificates file with the insecure flag is not allowed
+```
+
+#### 12.3.2 Base64 verzia kubeconfigu
+
+```bash
+cat ~/.kube/config-ci | base64
+```
+
+Skopíruj celý výstup (na GNU môžeš použiť `base64 -w0`).
+
+#### 12.3.3 GitLab CI/CD variable: `KUBECONFIG`
+
+Project → Settings → CI/CD → Variables:
+
+- Key: `KUBECONFIG`
+- Value: base64 obsah
+- Masked: ✓
+- Protected: podľa potreby (protected branches)
+- Environment scope: `*` alebo konkrétny (`test`, `prod`)
+
+V CI jobe:
+
+```bash
+echo "$KUBECONFIG" | base64 -d > kubeconfig
+export KUBECONFIG="$CI_PROJECT_DIR/kubeconfig"
+```
+
+### 12.4 GitLab Container Registry – prístup z Kubernetes
+
+#### 12.4.1 Vytvoriť Deploy Token
+
+Project → Settings → Repository → Deploy Tokens:
+
+- Name: `k8s-pull`
+- Username: `k8s-pull`
+- Scopes: **len** `read_registry`
+
+#### 12.4.2 K8s secret typu `docker-registry`
+
+V namespace `scp-test`:
+
+```bash
+kubectl create secret docker-registry gitlab-regcred \
+  -n scp-test \
+  --docker-server=registry.gitlab.com \
+  --docker-username=k8s-pull \
+  --docker-password="SEM_TOKEN" \
+  --docker-email="placeholder@example.com"
+```
+
+Pre `scp-prod` zopakuj s `-n scp-prod`.
+
+#### 12.4.3 `imagePullSecrets` v Deployment-e
+
+V šablóne `k8s/deployment.yaml.tpl` (v `spec.template.spec`):
+
+```yaml
+imagePullSecrets:
+  - name: gitlab-regcred
+containers:
+  - name: scp-app
+    image: "${IMAGE}"
+    imagePullPolicy: Always
+    ports:
+      - containerPort: 8080
+```
+
+### 12.5 CI/CD pipeline – finálny stav
+
+Sample `.gitlab-ci.yml` (build → docker → deploy na TEST):
+
+```yaml
+stages:
+  - build
+  - docker
+  - deploy
+
+# 1) Build + test cez Gradle
+build_and_test:
+  stage: build
+  tags: ["local-k8s"]
+  image: gradle:8.9-jdk17
+  script:
+    - echo "==> Gradle build + test"
+    - gradle clean test bootJar
+  artifacts:
+    paths:
+      - build/libs/
+    expire_in: 1 week
+  only:
+    - test
+    - main
+
+# 2) Docker build + push do GitLab Registry (bez dind, cez host Docker)
+docker_build_push:
+  stage: docker
+  tags: ["local-k8s"]
+  image: docker:27
+  needs:
+    - build_and_test
+  script:
+    - echo "==> Login do GitLab Container Registry"
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+
+    - |
+      if [ "$CI_COMMIT_BRANCH" = "test" ]; then
+        IMAGE_TAG="test-$CI_COMMIT_SHORT_SHA"
+      elif [ "$CI_COMMIT_BRANCH" = "main" ]; then
+        IMAGE_TAG="prod-$CI_COMMIT_SHORT_SHA"
+      else
+        IMAGE_TAG="$CI_COMMIT_SHORT_SHA"
+      fi
+      echo "IMAGE_TAG=$IMAGE_TAG" > image.env
+
+    - export IMAGE="$CI_REGISTRY_IMAGE:$IMAGE_TAG"
+    - echo "==> Build docker image $IMAGE"
+    - docker build -t "$IMAGE" .
+
+    - echo "==> Push docker image"
+    - docker push "$IMAGE"
+
+  artifacts:
+    reports:
+      dotenv: image.env
+  only:
+    - test
+    - main
+
+# 3) Deploy na TEST Kubernetes
+deploy_test:
+  stage: deploy
+  tags: ["local-k8s"]
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
+  environment:
+    name: test
+  needs:
+    - docker_build_push
+  only:
+    - test
+  script:
+    - echo "==> Deploy na TEST"
+
+    - export K8S_NAMESPACE="scp-test"
+    - export APP_HOST="test.scp.local"
+    - export SPRING_PROFILE="test"
+
+    - echo "$KUBECONFIG" | base64 -d > kubeconfig
+    - export KUBECONFIG="$CI_PROJECT_DIR/kubeconfig"
+
+    - export IMAGE="$CI_REGISTRY_IMAGE:$IMAGE_TAG"
+
+    - apt-get update && apt-get install -y gettext-base
+    - mkdir -p k8s/generated
+
+    - echo "==> Generujem YAML z templátov (TEST)..."
+    - envsubst < k8s/configmap.yaml.tpl   > k8s/generated/configmap.yaml
+    - envsubst < k8s/secret.yaml.tpl      > k8s/generated/secret.yaml
+    - envsubst < k8s/deployment.yaml.tpl  > k8s/generated/deployment.yaml
+    - envsubst < k8s/service.yaml.tpl     > k8s/generated/service.yaml
+    - envsubst < k8s/ingress.yaml.tpl     > k8s/generated/ingress.yaml
+
+    - echo "==> kubectl apply (TEST)..."
+    - kubectl apply -n "$K8S_NAMESPACE" -f k8s/generated/
+    - kubectl get pods -n "$K8S_NAMESPACE"
+```
+
+### 12.6 Testy a debug príkazy
+
+#### 12.6.1 Test kubectl z rovnakého image ako CI (`bitnami/kubectl`)
+
+```bash
+docker run --rm -it \
+  -v ~/.kube/config-ci:/kubeconfig \
+  --entrypoint sh \
+  bitnami/kubectl:latest
+
+# v kontajneri:
+export KUBECONFIG=/kubeconfig
+kubectl get pods -A
+```
+
+Ak toto funguje, CI deploy job sa vie pripojiť k API serveru.
+
+#### 12.6.2 Test HTTPS spojenia na Kubernetes API
+
+```bash
+docker run --rm -it alpine sh
+apk add curl
+curl -vk https://host.docker.internal:59107/api
+```
+
+`-k` ignoruje TLS certifikát (rovnaké ako `insecure-skip-tls-verify: true`).
+
+#### 12.6.3 Test cez Service (obídenie ingress-u)
+
+```bash
+kubectl get svc -n scp-test
+kubectl port-forward -n scp-test svc/scp-service 8081:8080
+
+# v inom termináli:
+curl -v http://localhost:8081/
+curl -v http://localhost:8081/hello   # podľa endpointu appky
+```
+
+Ak toto ide, Pod + Service fungujú; 404 môže byť v ingress/Host headri.
+
+#### 12.6.4 Test cez ingress
+
+```bash
+kubectl get svc -n ingress-nginx
+kubectl port-forward -n ingress-nginx svc/ingress-nginx-controller 8081:80
+kubectl get ingress -n scp-test
+kubectl describe ingress -n scp-test
+curl -v -H "Host: test.scp.local" http://localhost:8081/
+curl -v -H "Host: test.scp.local" http://localhost:8081/hello
+```
+
+Správny Host header je nutný, inak 404.
+
+### 12.7 Troubleshooting – reálne problémy
+
+#### 12.7.1 Job padá: `lookup host.docker.internal … no such host`
+
+Symptóm:
+
+```
+error validating "k8s/generated/deployment.yaml":
+failed to download openapi:
+Get "https://host.docker.internal:59107/openapi/v2?timeout=32s":
+dial tcp: lookup host.docker.internal on 169.254.169.254:53: no such host
+```
+
+Príčina: job beží na **shared runneri** v cloude, `host.docker.internal` tam neexistuje.
+
+Riešenie: runner tag `local-k8s`, `Run untagged jobs = false`, v CI joboch:
+
+```yaml
+tags: ["local-k8s"]
+```
+
+#### 12.7.2 `error: specifying a root certificates file with the insecure flag is not allowed`
+
+Príčina: v kubeconfigu je súčasne `insecure-skip-tls-verify: true` a `certificate-authority*`.
+
+Riešenie: v `~/.kube/config-ci` ponechaj len:
+
+```yaml
+server: https://host.docker.internal:PORT
+insecure-skip-tls-verify: true
+```
+
+#### 12.7.3 `Cannot connect to the Docker daemon at tcp://docker:2375`
+
+Príčina: používanie `docker:dind` (race condition).
+
+Riešenie: nepoužívať dind, ale host Docker socket:
+
+```toml
+volumes = [
+  "/var/run/docker.sock:/var/run/docker.sock",
+  "/cache"
+]
+```
+
+V CI stačí `image: docker:27` bez `services: docker:dind`.
+
+#### 12.7.4 `failed to authorize: failed to fetch anonymous token: 403 Forbidden`
+
+Príčina: K8s ťahá image z registry anonymne.
+
+Riešenie: deploy token (`read_registry`), secret `gitlab-regcred`, v Deployment-e:
+
+```yaml
+imagePullSecrets:
+  - name: gitlab-regcred
+```
+
+#### 12.7.5 `failed to download openapi` / `connection refused`
+
+Príčina: kubeconfig v CI ukazuje na `127.0.0.1` / lokálnu IP, alebo API server na porte nepočúva.
+
+Riešenie: použiť `https://host.docker.internal:<port>` v kubeconfigu, otestovať cez `bitnami/kubectl`.
+
+#### 12.7.6 Ingress vracia 404
+
+Príčina: Ingress pravidlo používa Host header (napr. `test.scp.local`), request ide s Host `localhost`.
+
+Riešenie:
+
+```bash
+curl -v -H "Host: test.scp.local" http://localhost:8081/
+```
+
+### 12.8 Záver
+
+Táto kapitola obsahuje:
+
+- setup GitLab Runnera s host Docker daemonom
+- prípravu kubeconfigu pre CI
+- GitLab Container Registry + deploy token + imagePullSecrets
+- finálny `.gitlab-ci.yml` (build → docker → deploy)
+- testovacie príkazy a reálne troubleshooting tipy
+
+Podľa nej vieš setup zreprodukovať od nuly a pochopiť, prečo sú kroky nastavené takto.
