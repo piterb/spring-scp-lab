@@ -30,6 +30,7 @@ Budeme ho postupne dopĺňať podľa toho, čo v kurze použijeme.
   - [7.5 Alternatívny port-forward (priame volanie Service – obchádza Ingress)](#75-alternatívny-port-forward-priame-volanie-service--obchádza-ingress)
 - [8. Git – základné príkazy](#8-git--základné-príkazy)
   - [8.11 Pridanie existujúceho projektu do nového GitHub repozitára](#811-pridanie-existujúceho-projektu-do-nového-github-repozitára)
+  - [8.12 Inicializácia novej Spring Boot appky (Spring Initializr)](#812-inicializácia-novej-spring-boot-appky-spring-initializr)
 - [9. Lens – Kubernetes Desktop GUI (odporúčaný nástroj)](#9-lens--kubernetes-desktop-gui-odporúčaný-nástroj)
 - [10. Poznámky](#10-poznámky)
 - [11. Čistenie `default` namespace (lokálny dev cluster)](#11-čistenie-default-namespace-lokálny-dev-cluster)
@@ -611,6 +612,47 @@ git push -u origin main
 ```
 
 > Inicializuje Git v projekte, pridá všetky súbory, vytvorí prvý commit, nastaví default vetvu `main`, pridá GitHub remote a odošle kód.
+
+---
+
+### 8.12 Inicializácia novej Spring Boot appky (Spring Initializr)
+
+1) Otvor https://start.spring.io a vyplň:
+
+- Project: Gradle Project
+- Language: Java
+- Spring Boot: 3.5.x (aktuálne stable).
+- Project Metadata: Group (napr. `com.example`), Artifact/Name (napr. `demo`), Description, Package name (auto).
+- Packaging: Jar
+- Java: 17
+
+2) Dependencies – minimum na REST + persistenciu:
+
+- Spring Web
+- Spring Boot Actuator
+- Spring Data JPA 
+- Validation (Bean Validation)
+- Database driver podľa potreby: PostgreSQL (prod), H2 (lokálne dev)
+- Voliteľné: Lombok (ak používate), Testcontainers (PostgreSQL) pre integračné testy
+
+3) Klikni Generate Project, rozbaľ zip a otvor v IDE. Alternatíva CLI:
+
+```bash
+curl -G https://start.spring.io/starter.zip \
+  -d type=gradle-project \
+  -d language=java \
+  -d bootVersion=3.5.0 \
+  -d groupId=com.example \
+  -d artifactId=demo \
+  -d name=demo \
+  -d packaging=jar \
+  -d javaVersion=21 \
+  -d dependencies=web,actuator,data-jpa,validation,postgresql,testcontainers \
+  -o demo.zip
+unzip demo.zip -d demo
+```
+
+> Stiahne Gradle projekt s odporúčanými verziami a závislosťami.
 
 ---
 
