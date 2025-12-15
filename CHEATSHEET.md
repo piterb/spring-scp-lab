@@ -29,6 +29,7 @@ Budeme ho postupne dopĺňať podľa toho, čo v kurze použijeme.
   - [7.4 Port-forward na Ingress Controller (HTTP vstup cez Ingress)](#74-port-forward-na-ingress-controller-http-vstup-cez-ingress)
   - [7.5 Alternatívny port-forward (priame volanie Service – obchádza Ingress)](#75-alternatívny-port-forward-priame-volanie-service--obchádza-ingress)
 - [8. Git – základné príkazy](#8-git--základné-príkazy)
+  - [8.11 Pridanie existujúceho projektu do nového GitHub repozitára](#811-pridanie-existujúceho-projektu-do-nového-github-repozitára)
 - [9. Lens – Kubernetes Desktop GUI (odporúčaný nástroj)](#9-lens--kubernetes-desktop-gui-odporúčaný-nástroj)
 - [10. Poznámky](#10-poznámky)
 - [11. Čistenie `default` namespace (lokálny dev cluster)](#11-čistenie-default-namespace-lokálny-dev-cluster)
@@ -593,6 +594,23 @@ git remote add origin git@gitlab.com:username/projekt.git
 ```
 
 > Pridá nový remote.
+
+### 8.11 Pridanie existujúceho projektu do nového GitHub repozitára
+
+1) Na GitHube vytvor prázdny repozitár (bez README, .gitignore, LICENSE).
+
+2) V koreňovom adresári projektu spusti:
+
+```bash
+git init
+git add .
+git commit -m "Initial commit"
+git branch -M main
+git remote add origin git@github.com:<tvoj_github>/<repo>.git
+git push -u origin main
+```
+
+> Inicializuje Git v projekte, pridá všetky súbory, vytvorí prvý commit, nastaví default vetvu `main`, pridá GitHub remote a odošle kód.
 
 ---
 
