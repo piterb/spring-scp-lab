@@ -41,8 +41,15 @@ Budeme ho postupne dopĺňať podľa toho, čo v kurze použijeme.
   - [12.4 GitLab Container Registry – prístup z Kubernetes](#124-gitlab-container-registry--prístup-z-kubernetes)
   - [12.5 CI/CD pipeline – finálny stav](#125-cicd-pipeline--finálny-stav)
   - [12.6 Testy a debug príkazy](#126-testy-a-debug-príkazy)
-  - [12.7 Troubleshooting – reálne problémy](#127-troubleshooting--reálne-problémy)
-  - [12.8 Záver](#128-záver)
+  - [12.7 Záver](#127-záver)
+- [13. Troubleshooting – reálne problémy](#13-troubleshooting--reálne-problémy)
+  - [13.1 Docker build: no match for platform in manifest](#131-docker-build-no-match-for-platform-in-manifest)
+  - [13.2 Job padá: lookup host.docker.internal … no such host](#132-job-padá-lookup-hostdockerinternal--no-such-host)
+  - [13.3 error: specifying a root certificates file with the insecure flag is not allowed](#133-error-specifying-a-root-certificates-file-with-the-insecure-flag-is-not-allowed)
+  - [13.4 Cannot connect to the Docker daemon at tcp://docker:2375](#134-cannot-connect-to-the-docker-daemon-at-tcpdocker2375)
+  - [13.5 failed to authorize: failed to fetch anonymous token: 403 Forbidden](#135-failed-to-authorize-failed-to-fetch-anonymous-token-403-forbidden)
+  - [13.6 failed to download openapi / connection refused](#136-failed-to-download-openapi--connection-refused)
+  - [13.7 Ingress vracia 404](#137-ingress-vracia-404)
 
 ---
 
@@ -1224,9 +1231,37 @@ curl -v -H "Host: test.scp.local" http://localhost:8081/hello
 
 Správny Host header je nutný, inak 404.
 
-### 12.7 Troubleshooting – reálne problémy
+### 12.7 Záver
 
-#### 12.7.1 Job padá: `lookup host.docker.internal … no such host`
+Táto kapitola obsahuje:
+
+- setup GitLab Runnera s host Docker daemonom
+- prípravu kubeconfigu pre CI
+- GitLab Container Registry + deploy token + imagePullSecrets
+- finálny `.gitlab-ci.yml` (build → docker → deploy)
+- testovacie príkazy a reálne troubleshooting tipy
+
+Podľa nej vieš setup zreprodukovať od nuly a pochopiť, prečo sú kroky nastavené takto.
+
+## 13. Troubleshooting – reálne problémy
+
+### 13.1 Docker build: `no match for platform in manifest`
+
+Symptóm (napr. pri `gradle:8.10.2-jdk17-alpine`):
+
+```
+ERROR [internal] load metadata for docker.io/library/gradle:8.10.2-jdk17-alpine
+ERROR: failed to build: failed to solve: no match for platform in manifest: not found
+```
+
+Príčina: image nemá variant pre aktuálnu architektúru (napr. `linux/arm64`), Alpine tagy ho často neponúkajú.
+
+Riešenia:
+
+- Použi multi-arch tag (napr. `gradle:8.10.2-jdk17` alebo `gradle:8.10.2-jdk21` – Debian/Temurin), prípadne base `eclipse-temurin:17-jdk` a spúšťaj lokálny `./gradlew`.
+- Ak musíš ostať na Alpine, nastav `--platform linux/amd64` (emulácia cez qemu), ale je to pomalšie; lepšie je prepnúť na multi-arch image.
+
+### 13.2 Job padá: `lookup host.docker.internal … no such host`
 
 Symptóm:
 
@@ -1245,7 +1280,7 @@ Riešenie: runner tag `local-k8s`, `Run untagged jobs = false`, v CI joboch:
 tags: ["local-k8s"]
 ```
 
-#### 12.7.2 `error: specifying a root certificates file with the insecure flag is not allowed`
+### 13.3 `error: specifying a root certificates file with the insecure flag is not allowed`
 
 Príčina: v kubeconfigu je súčasne `insecure-skip-tls-verify: true` a `certificate-authority*`.
 
@@ -1256,7 +1291,7 @@ server: https://host.docker.internal:PORT
 insecure-skip-tls-verify: true
 ```
 
-#### 12.7.3 `Cannot connect to the Docker daemon at tcp://docker:2375`
+### 13.4 `Cannot connect to the Docker daemon at tcp://docker:2375`
 
 Príčina: používanie `docker:dind` (race condition).
 
@@ -1271,7 +1306,7 @@ volumes = [
 
 V CI stačí `image: docker:27` bez `services: docker:dind`.
 
-#### 12.7.4 `failed to authorize: failed to fetch anonymous token: 403 Forbidden`
+### 13.5 `failed to authorize: failed to fetch anonymous token: 403 Forbidden`
 
 Príčina: K8s ťahá image z registry anonymne.
 
@@ -1282,13 +1317,13 @@ imagePullSecrets:
   - name: gitlab-regcred
 ```
 
-#### 12.7.5 `failed to download openapi` / `connection refused`
+### 13.6 `failed to download openapi` / `connection refused`
 
 Príčina: kubeconfig v CI ukazuje na `127.0.0.1` / lokálnu IP, alebo API server na porte nepočúva.
 
 Riešenie: použiť `https://host.docker.internal:<port>` v kubeconfigu, otestovať cez `bitnami/kubectl`.
 
-#### 12.7.6 Ingress vracia 404
+### 13.7 Ingress vracia 404
 
 Príčina: Ingress pravidlo používa Host header (napr. `test.scp.local`), request ide s Host `localhost`.
 
@@ -1297,15 +1332,3 @@ Riešenie:
 ```bash
 curl -v -H "Host: test.scp.local" http://localhost:8081/
 ```
-
-### 12.8 Záver
-
-Táto kapitola obsahuje:
-
-- setup GitLab Runnera s host Docker daemonom
-- prípravu kubeconfigu pre CI
-- GitLab Container Registry + deploy token + imagePullSecrets
-- finálny `.gitlab-ci.yml` (build → docker → deploy)
-- testovacie príkazy a reálne troubleshooting tipy
-
-Podľa nej vieš setup zreprodukovať od nuly a pochopiť, prečo sú kroky nastavené takto.
